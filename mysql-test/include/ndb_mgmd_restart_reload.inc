@@ -44,3 +44,7 @@ EOF
 # Step 4: Wait for data nodes to reconnect to the restarted mgmd
 # and reach STARTED state (not just mgmd contactable)
 --exec $NDB_WAITER --timeout=120 > /dev/null 2>&1
+
+# Step 5: Wait for the arbitrator to be (re-)selected.
+--let $wait_condition= SELECT COUNT(*) > 0 FROM ndbinfo.membership WHERE arbitrator > 0
+--source include/wait_condition.inc
