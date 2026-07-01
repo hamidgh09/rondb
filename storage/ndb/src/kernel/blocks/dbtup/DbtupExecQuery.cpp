@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2003, 2025, Oracle and/or its affiliates.
+   Copyright (c) 2003, 2026, Oracle and/or its affiliates.
    Copyright (c) 2021, 2026, Hopsworks and/or its affiliates.
 
    This program is free software; you can redistribute it and/or modify
@@ -3409,7 +3409,7 @@ int Dbtup::handleUpdateReq(Signal* signal,
                            Fragrecord* regFragPtr,
                            Tablerec* regTabPtr,
                            KeyReqStruct* req_struct,
-                           bool disk) 
+                           bool disk)
 {
   if (unlikely(operPtrP->ttl_ignore == 0 &&
                operPtrP->ttl_only_expired == 1 &&

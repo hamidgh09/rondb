@@ -43,6 +43,7 @@ ndb.ndb_local_logevents   : WL#87654321 Disabled pending investigation
 #ndb.ndb_basic_4rpl        : WL#87654321
 #ndb.bug_rondb-852         : WL#87654321
 #ndb.ndb_err899            : WL#87654321
+#ndb.ndb_local_logevents   : WL#87654321
 #ndb.ndb_restore_conv_pk_slice_remap : WL#87654321
 #ndb.ndb_basic_ndbd_shm : WL#87654321
 #End mixed version disabling

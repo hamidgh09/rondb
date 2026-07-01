@@ -1,4 +1,4 @@
-/* Copyright (c) 2004, 2025, Oracle and/or its affiliates.
+/* Copyright (c) 2004, 2026, Oracle and/or its affiliates.
    Copyright (c) 2022, 2026, Hopsworks and/or its affiliates.
 
   This program is free software; you can redistribute it and/or modify
@@ -2517,7 +2517,7 @@ int ha_ndbcluster::open_index_ndb_record(NdbDictionary::Dictionary *dict,
   DBUG_TRACE;
   NdbDictionary::RecordSpecification spec[NDB_MAX_NO_OF_ATTRIBUTES_IN_KEY + 2];
   NdbRecord *rec;
-  assert(key_info->user_defined_key_parts < 
+  assert(key_info->user_defined_key_parts <
     (NDB_MAX_NO_OF_ATTRIBUTES_IN_KEY + 2));
 
   Uint32 offset = 0;
