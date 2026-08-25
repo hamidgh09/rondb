@@ -4772,16 +4772,27 @@ bool MgmtSrvr::alloc_node_id_impl(NodeId &nodeid, enum ndb_mgm_node_type type,
                                   const ndb_sockaddr *client_addr,
                                   int &error_code, BaseString &error_string,
                                   Uint32 timeout_s) {
-  if (m_opts.no_nodeid_checks) {
-    if (nodeid == 0) {
-      error_string.appfmt(
-          "no-nodeid-checks set in management server. "
-          "node id must be set explicitly in connectstring");
-      error_code = NDB_MGM_ALLOCID_CONFIG_MISMATCH;
-      return false;
-    }
+  /* Skip all checks; just approve the requested node id. This error insert
+     replaces the original behavior of the --no-nodeid-checks option.
+  */
+  if (ERROR_INSERTED(901)) {
+    require(nodeid > 0);
     return true;
   }
+
+  /* Check the node id request. There are several stages of checks:
+      1) Fundamental checks: is the cluster configuration available, does the
+         requested id exist in it, does its configured type match the requested
+         type?
+      2) The address check: using the client's socket address, the configured
+         hostnames, and the DNS, match the request to a configured hostname.
+         This can be skipped using --skip-nodeid-address-checks.
+      3) The distributed availability check: every running mgm and db node must
+         confirm that the id is available (not currently connected, and not in
+         failure handling).
+  */
+
+  /* 1) Fundamental checks */
   /* Don't allow allocation of this ndb_mgmd's nodeid */
   assert(_ownNodeId);
   if (nodeid == _ownNodeId) {
@@ -4817,8 +4828,7 @@ bool MgmtSrvr::alloc_node_id_impl(NodeId &nodeid, enum ndb_mgm_node_type type,
       if (NdbTick_Elapsed(start, now).milliSec() > timeout_ms) {
         error_code = NDB_MGM_ALLOCID_ERROR;
         error_string.append(
-            "Unable to allocate nodeid as configuration"
-            " not yet confirmed");
+            "Unable to allocate nodeid as configuration not yet confirmed");
         return false;
       }
 
@@ -4851,8 +4861,20 @@ bool MgmtSrvr::alloc_node_id_impl(NodeId &nodeid, enum ndb_mgm_node_type type,
 
   /* Choose subset of candidates matching client address */
   Vector<PossibleNode> nodes;
-  match_client_addr_to_config_nodes(nodeid, type, client_addr, config_nodes,
-                                    nodes);
+
+  /* 2) The address check */
+  if (m_opts.nodeid_check_addr) {
+    match_client_addr_to_config_nodes(nodeid, type, client_addr, config_nodes,
+                                      nodes);
+  } else if (nodeid) {
+    nodes.push_back({nodeid, "", false});
+  } else {
+    error_string.appfmt(
+        "nodeid-address-check disabled in management server. "
+        "node id must be set explicitly in connectstring");
+    error_code = NDB_MGM_ALLOCID_CONFIG_MISMATCH;
+    return false;
+  }
 
   if (nodes.size() == 0) {
     /**
@@ -4958,6 +4980,7 @@ bool MgmtSrvr::alloc_node_id_impl(NodeId &nodeid, enum ndb_mgm_node_type type,
     }
   }
 
+  /* 3) The distributed availability check */
   const int try_alloc_rc = try_alloc_from_list(nodeid, type, timeout_ms, nodes,
                                                error_code, error_string);
   if (try_alloc_rc == 0) {
@@ -5677,7 +5700,7 @@ void MgmtSrvr::show_variables(NdbOut &out) {
   out << "config_filename: " << str_null(m_opts.config_filename) << endl;
   out << "mycnf: " << yes_no(m_opts.mycnf) << endl;
   out << "bind_address: " << str_null(m_opts.bind_address) << endl;
-  out << "no_nodeid_checks: " << yes_no(m_opts.no_nodeid_checks) << endl;
+  out << "check_address: " << yes_no(m_opts.nodeid_check_addr) << endl;
   out << "print_full_config: " << yes_no(m_opts.print_full_config) << endl;
   out << "configdir: " << str_null(m_opts.configdir) << endl;
   out << "config_cache: " << yes_no(m_opts.config_cache) << endl;
@@ -6385,13 +6408,17 @@ void MgmtSrvr::get_quotas(const char *database_name, bool is_user, NdbOut& out) 
         const GetDatabaseConf * conf =
           CAST_CONSTPTR(GetDatabaseConf, signal->getDataPtr());
 
-        /* First send the protocol part */
+        /*
+         * First send the protocol part. The client reads exactly num_rows
+         * newline-terminated rows off the socket, so num_rows must match the
+         * number of rows emitted below for this branch: a database record has
+         * 9 rows, a user record has 6. Declaring the wrong count hangs the
+         * client's socket read (timeout).
+         */
         out << "result: Ok" << endl;
-        out << "num_rows: 9" << endl;
-        out << endl;
-
-        /* Next send the result data with 9 rows */
         if (!is_user) {
+          out << "num_rows: 9" << endl;
+          out << endl;
           out << "Database Quotas for " << (const char*)&databaseName[0] << endl;
           out << "databaseId = " << conf->databaseId << endl;
           out << "databaseVersion = " << conf->databaseId << endl;
@@ -6404,6 +6431,8 @@ void MgmtSrvr::get_quotas(const char *database_name, bool is_user, NdbOut& out) 
           out << "MaxParallelComplexQueries = ";
           out << conf->MaxParallelComplexQueries << endl;
         } else {
+          out << "num_rows: 6" << endl;
+          out << endl;
           out << "User rate limits for " << (const char*)&databaseName[0] << endl;
           out << "userId = " << conf->databaseId << endl;
           out << "userVersion = " << conf->databaseId << endl;
@@ -6550,17 +6579,24 @@ void MgmtSrvr::list_quotas(Uint32 nextDatabaseId, bool is_user, NdbOut& out) {
           out << endl;
           return;
         }
-        /* First send the protocol part */
+        /*
+         * First send the protocol part. num_rows must match the number of
+         * newline-terminated rows emitted for this branch (the client reads
+         * exactly that many off the socket): a database record has 10 rows
+         * (9 fields + trailing blank), a user record has 8 rows (7 fields +
+         * trailing blank). A wrong count hangs the client's socket read.
+         */
         nextDatabaseId = conf->databaseId + 1;
         out << "result: Ok" << endl;
-        out << "num_rows: 10" << endl;
-        if (!is_user)
+        if (!is_user) {
+          out << "num_rows: 10" << endl;
           out << "nextDatabaseId: " << nextDatabaseId << endl;
-        else
+        } else {
+          out << "num_rows: 8" << endl;
           out << "nextUserId: " << nextDatabaseId << endl;
+        }
         out << endl;
 
-        /* Next send the result data with 9 rows */
         if (!is_user) {
           const char *databaseName = (const char*)signal->ptr[0].p;
           out << "Database Quotas for " << databaseName << endl;
