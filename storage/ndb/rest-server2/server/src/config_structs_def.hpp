@@ -86,12 +86,28 @@ CLASS
     "Maximum number of requests contained in a batch request.")
  CM(Uint32, operationIdMaxSize, OperationIDMaxSize, 256,
     "Maximum length of operation ID strings.")
+ CM(Uint32, featureStoreScanDefaultLimit, FeatureStoreScanDefaultLimit, 1000,
+    "Number of feature vectors a feature_store_scan request returns when the"
+    " request omits the limit field.")
+ CM(Uint32, featureStoreScanMaxLimit, FeatureStoreScanMaxLimit, 10000,
+    "Upper bound on the limit field of a feature_store_scan request and on"
+    " the number of primary-key branches of its fast path. Larger requests"
+    " are rejected with 400.")
+ CM(Uint32, featureStoreScanBatchSize, FeatureStoreScanBatchSize, 256,
+    "Number of root feature-group rows per pk_batch_read round-trip when a"
+    " feature_store_scan request fans out to the joined feature groups.")
  //todo warn (preallocatedbuffers == 0, "preAllocatedBuffers should be > 0")
  PROBLEM(reqBufferSize < 256, "ReqBufferSize should be >= 256")
  PROBLEM(respBufferSize < 256, "RespBufferSize should be >= 256")
  PROBLEM(scanRespBufferSize < 1024, "ScanRespBufferSize should be >= 1024")
  PROBLEM(batchMaxSize > 512, "BatchMaxSize should be <= 512")
  PROBLEM(batchMaxSize < 50, "BatchMaxSize should be >= 50")
+ PROBLEM(featureStoreScanDefaultLimit < 1,
+         "FeatureStoreScanDefaultLimit should be >= 1")
+ PROBLEM(featureStoreScanMaxLimit < featureStoreScanDefaultLimit,
+         "FeatureStoreScanMaxLimit should be >= FeatureStoreScanDefaultLimit")
+ PROBLEM(featureStoreScanBatchSize < 1,
+         "FeatureStoreScanBatchSize should be >= 1")
 )
 
 CLASS

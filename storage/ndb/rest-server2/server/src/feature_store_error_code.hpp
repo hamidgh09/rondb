@@ -125,4 +125,16 @@ const std::shared_ptr<RestErrorCode> DESERIALISE_FEATURE_FAIL =
 const std::shared_ptr<RestErrorCode> RATE_LIMIT_EXCEEDED =
     std::make_shared<RestErrorCode>(20, "Rate limit exceeded.", 429, "");
 
+/* feature_store_scan */
+const std::shared_ptr<RestErrorCode> FEATURE_VIEW_NOT_STAR_SCHEMA =
+    std::make_shared<RestErrorCode>(21, "Feature view does not have a standard star schema.", 400, "");
+const std::shared_ptr<RestErrorCode> ROOT_FG_NOT_ONLINE =
+    std::make_shared<RestErrorCode>(22, "The root feature group has no online table to scan.", 400, "");
+const std::shared_ptr<RestErrorCode> FEATURE_NOT_IN_ROOT_FG =
+    std::make_shared<RestErrorCode>(23, "Filter and index columns must be features of the root feature group.", 400, "");
+const std::shared_ptr<RestErrorCode> FILTER_ON_COMPLEX_FEATURE =
+    std::make_shared<RestErrorCode>(24, "Filter and index columns cannot be complex features.", 400, "");
+const std::shared_ptr<RestErrorCode> LIMIT_EXCEEDED =
+    std::make_shared<RestErrorCode>(25, "Limit exceeded.", 400, "");
+
 #endif  // STORAGE_NDB_REST_SERVER2_SERVER_SRC_FEATURE_STORE_ERROR_CODE_HPP_

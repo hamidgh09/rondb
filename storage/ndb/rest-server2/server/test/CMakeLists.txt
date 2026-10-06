@@ -43,6 +43,12 @@ NDB_ADD_EXECUTABLE(probe_server_http_test probe_server_http_test.cpp
 NDB_ADD_EXECUTABLE(probe_server_cluster_test probe_server_cluster_test.cpp
                    STATIC_NDBCLIENT)
 
+NDB_ADD_EXECUTABLE(
+  feature_store_scan_test
+  feature_store_scan_test.cpp
+  STATIC_NDBCLIENT
+)
+
 TARGET_LINK_LIBRARIES(
 	api_key_test
 	gtest_main
@@ -90,6 +96,14 @@ TARGET_LINK_LIBRARIES(
   ${GTEST_LIBRARIES}
 )
 
+TARGET_LINK_LIBRARIES(
+  feature_store_scan_test
+  gtest_main
+  rdrs2_lib
+  ${GTEST_LIBRARIES}
+  pthread
+)
+
 # The C++ tests do not seed the cluster and embed no SQL fixtures. The test
 # databases are created by the Go test suite from
 # test_go/resources/testdbs (the single source of truth) - run any Go
@@ -97,6 +111,7 @@ TARGET_LINK_LIBRARIES(
 
 add_test(NAME api_key_test COMMAND api_key_test)
 add_test(NAME feature_store_test COMMAND feature_store_test)
+add_test(NAME feature_store_scan_test COMMAND feature_store_scan_test)
 add_test(NAME error_handling_test COMMAND error_handling_test)
 add_test(NAME reconnect_test COMMAND reconnect_test)
 add_test(NAME probe_server_http_test COMMAND probe_server_http_test)

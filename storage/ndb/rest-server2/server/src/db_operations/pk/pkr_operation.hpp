@@ -33,6 +33,8 @@
 #include <NdbApi.hpp>
 #include <ArenaMalloc.hpp>
 
+class FilterNode;
+
 struct KeyOperation {
   Uint32 m_num_pk_columns;
   Uint32 m_num_read_columns;
@@ -46,6 +48,8 @@ struct KeyOperation {
   const NdbDictionary::Column **m_readColumns;
   NdbBlob **m_blob_handles;
   const NdbRecord *m_ndb_record;
+  const std::shared_ptr<FilterNode> *m_filter;
+  NdbInterpretedCode *m_interpreted_code;
   PKRRequest m_req;
   PKRResponse m_resp;
   RS_Status append_op_recs(PKRResponse *resp, PKRRequest *req);
@@ -68,6 +72,7 @@ class BatchKeyOperations {
   /* Rate limit identity set on every transaction; nullptr = disabled */
   const char *m_rate_limit_identity;
   Uint32 m_rate_limit_identity_len;
+  const std::shared_ptr<FilterNode> *m_op_filters;
 
  public:
    BatchKeyOperations();
@@ -79,7 +84,8 @@ class BatchKeyOperations {
                                RS_Buffer *respBuffer,
                                Ndb *ndb_object,
                                const char *rate_limit_identity,
-                               Uint32 rate_limit_identity_len);
+                               Uint32 rate_limit_identity_len,
+                               const void *op_filters = nullptr);
    RS_Status init_batch_operations(ArenaMalloc*,
                                    Uint32,
                                    bool is_batch,
