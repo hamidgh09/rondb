@@ -260,13 +260,13 @@ Reading the third row: user 91 exists in the root FG (so it matched the scan) bu
 Response fields:
 
 * `features` — array of rows; each row is a positional array ordered by the Feature View's feature order (label features excluded). Complex features are decoded JSON values, never base64.
-* `metadata` — always N entries, positional with the row columns. Values are `null` unless enabled through `metadataOptions`. `featureType` is the Hopsworks offline type.
+* `metadata` — N entries, positional with the row columns, when at least one `metadataOptions` flag is set; otherwise an empty array (see below). `featureType` is the Hopsworks offline type.
 * `status` — one entry per row: `COMPLETE` (every FG returned a row), `MISSING` (at least one non-root FG had no row; those features are `null`), `ERROR` (a per-row failure, e.g. Avro decode; see §5). Rows from spine FGs are always `MISSING`, as today. Omitted entirely when `options.includeStatus = false` (D2).
 * `detailedStatus` — present only when `options.includeDetailedStatus = true`; per row, per FG `{ "httpStatus", "featureGroupId" }`. Same as `/batch_feature_store`.
 * `rows` — number of rows in `features`. Convenience field mirroring `/scan`.
 * `warning` — optional string, emitted only when the request had neither `filters` nor `index` (`"full scan of root feature group; consider adding filters or an index range"`).
 
-If `metadataOptions` is omitted, the `metadata` array is still present with `{ "featureName": null, "featureType": null }` entries, matching `/feature_store`.
+If `metadataOptions` is omitted, or both flags are `false`, the `metadata` array is present but **empty** (`"metadata": []`), matching `/feature_store`. (`/batch_feature_store` instead emits one `{ "featureName": null, "featureType": null }` entry per feature.) When at least one flag is set the array has one entry per feature, with the unrequested field `null`.
 
 Compare with what `/scan` returns today for the root table alone (keyed objects, column names repeated per row, VARBINARY as base64):
 

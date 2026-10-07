@@ -57,13 +57,14 @@ func Test_FastPath_PkEquality_MatchesBatchFeatureStore(t *testing.T) {
 
 func Test_FastPath_AbsentKey_NoRow(t *testing.T) {
 	req := NewScanRequest(fsStar, fvStar, fvVersion).
-		With("filters", Cmp("id1", "EQ", 987654321))
+		With("filters", Cmp("id1", "EQ", 987654321)).
+		With("metadataOptions", map[string]bool{"featureName": true, "featureType": true})
 	got := GetScanResponse(t, req)
 	if got.Rows != 0 || len(got.Features) != 0 || len(got.Status) != 0 {
 		t.Fatalf("absent key must produce no row, got %s", got.Features)
 	}
 	if len(got.Metadata) == 0 {
-		t.Errorf("metadata must be emitted even for an empty result")
+		t.Errorf("metadata must be emitted even for an empty result when requested")
 	}
 }
 
@@ -377,11 +378,26 @@ func Test_MetadataAndOptions(t *testing.T) {
 		}
 	}
 
-	// default: metadata present, values null
+	// default: metadata is an empty array, as /feature_store
 	got = GetScanResponse(t, base())
+	if !got.HasKey("metadata") || len(got.Metadata) != 0 {
+		t.Errorf("metadata must be an empty array by default, got %s", canonical(t, got.Metadata))
+	}
+
+	// both options false: also an empty array
+	got = GetScanResponse(t, base().With("metadataOptions", map[string]bool{"featureName": false, "featureType": false}))
+	if len(got.Metadata) != 0 {
+		t.Errorf("metadata must be an empty array when both options are false, got %s", canonical(t, got.Metadata))
+	}
+
+	// one option set: one entry per feature, the other field null
+	got = GetScanResponse(t, base().With("metadataOptions", map[string]bool{"featureType": true}))
+	if len(got.Metadata) != len(ref.Features[0]) {
+		t.Fatalf("metadata has %d entries for %d features", len(got.Metadata), len(ref.Features[0]))
+	}
 	for _, m := range got.Metadata {
-		if m.Name != nil || m.Type != nil {
-			t.Errorf("metadata must be null by default, got %s", m)
+		if m.Name != nil || m.Type == nil {
+			t.Errorf("featureType alone must populate only the type, got %s", m)
 		}
 	}
 	if !got.HasKey("status") || got.HasKey("detailedStatus") {

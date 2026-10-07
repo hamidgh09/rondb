@@ -602,7 +602,11 @@ static std::string buildResponseBody(
     res += "]";
   }
   res += "],\"metadata\":[";
-  auto metadataArray = GetFeatureMetadata(&md, metadataRequest);
+  std::vector<fsds::FeatureMetadata> metadataArray;
+  if (metadataRequest.featureName.value_or(false) ||
+      metadataRequest.featureType.value_or(false)) {
+    metadataArray = GetFeatureMetadata(&md, metadataRequest);
+  }
   for (size_t i = 0; i < metadataArray.size(); i++) {
     if (i > 0) res += ",";
     res += "{\"featureName\":";
